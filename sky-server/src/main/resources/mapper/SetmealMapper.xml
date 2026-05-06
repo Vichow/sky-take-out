@@ -22,7 +22,13 @@
         </set>
         where id = #{id}
     </update>
-    <select id="pageQuery" resultType="com.sky.entity.Setmeal">
+    <delete id="deleteByids">
+        delete from setmeal where id in
+        <foreach item="id" collection="ids" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </delete>
+    <select id="pageQuery" resultType="com.sky.vo.SetmealVO">
         select s.*, c.name categoryName from setmeal s left join category c on s.category_id = c.id
         <where>
             <if test="name != null and name != ''">
