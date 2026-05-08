@@ -1,5 +1,6 @@
 package com.sky.controller.admin;
 
+import com.sky.constant.StatusConstant;
 import com.sky.dto.DishDTO;
 import com.sky.dto.DishPageQueryDTO;
 import com.sky.entity.Dish;
@@ -12,10 +13,12 @@ import com.sky.vo.DishVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @Slf4j
@@ -26,6 +29,8 @@ public class DishController {
     private DishService dishService;
     @Autowired
     private DishFlavorMapper dishFlavorMapper;
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     /**
      * 新增菜品
@@ -36,6 +41,9 @@ public class DishController {
     public Result save(@RequestBody DishDTO dishDTO) {
         log.info("新增菜品:{}", dishDTO);
         dishService.saveWithFlavor(dishDTO);
+        //清理缓存数据
+        String key = "dish_" + dishDTO.getCategoryId();
+        clearCache( key);
         return Result.success();
     }
 
@@ -60,6 +68,8 @@ public class DishController {
     public Result delete(@RequestParam List<Long> ids) {
         log.info("批量删除菜品:{}", ids);
         dishService.delete(ids);
+        //清理缓存数据
+        clearCache("dish_*");
         return Result.success();
     }
 
@@ -84,6 +94,7 @@ public class DishController {
     public Result update(@RequestBody DishDTO dishDTO) {
         log.info("修改菜品:{}", dishDTO);
         dishService.updateWithFlavor(dishDTO);
+        clearCache("dish_*");
         return Result.success();
     }
 
@@ -97,6 +108,7 @@ public class DishController {
     public Result startOrStop(@PathVariable Integer status, Long id) {
         log.info("菜品状态：{}，菜品id：{}", status, id);
         dishService.startOrStop(status, id);
+        clearCache("dish_*");
         return Result.success();
     }
 
@@ -107,17 +119,19 @@ public class DishController {
      */
     @GetMapping("/list")
     public Result<List<DishVO>> list(Long categoryId) {
-        log.info("根据分类id查询菜品选项：{}", categoryId);
-        List<Dish> list = dishService.list(categoryId);
-        List<DishVO> VOlist = new ArrayList<>();
-        for (Dish d : list) {
-            DishVO dishVO = new DishVO();
-            BeanUtils.copyProperties(d, dishVO);
+        Dish dish = new Dish();
+        dish.setCategoryId(categoryId);
+        dish.setStatus(StatusConstant.ENABLE);//查询起售中的菜品
+        List<DishVO> list = dishService.listWithFlavor(dish);
+        return Result.success(list);
+    }
 
-            List<DishFlavor> dishFlavors = dishFlavorMapper.getByDishId(d.getId());
-            dishVO.setFlavors(dishFlavors);
-            VOlist.add(dishVO);
-        }
-        return Result.success(VOlist);
+    /**
+     * 清理缓存数据
+     * @param key
+     */
+    private void clearCache(String key) {
+        Set keys = redisTemplate.keys(key);
+        redisTemplate.delete(keys);
     }
 }
