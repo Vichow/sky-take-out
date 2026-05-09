@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -239,5 +240,46 @@ public class OrderServiceImpl implements OrderService {
                 return shoppingCart;}).collect(Collectors.toList());
         //添加到数据库
         shoppingCartMapper.insertBatch(shoppingCartList);
+    }
+
+    /**
+     * 条件搜索订单
+     * @param ordersPageQueryDTO
+     * @return
+     */
+    @Override
+    public PageResult conditionSearch(OrdersPageQueryDTO ordersPageQueryDTO) {
+        PageHelper.startPage(ordersPageQueryDTO.getPage(),ordersPageQueryDTO.getPageSize());
+        Page<Orders> page = orderMapper.pageQuery(ordersPageQueryDTO);
+        //部分订单需要额外返回订单菜品列表
+        List<OrderVO> list = getOrderVOList(page);
+        return new PageResult(page.getTotal(),list);
+    }
+    //封装成OrderVO
+    private List<OrderVO> getOrderVOList(Page<Orders> page){
+        List<OrderVO> list = new ArrayList<>();
+        List<Orders> records = page.getResult();
+        if (!CollectionUtils.isEmpty(records)){
+            for (Orders orders : records) {
+                OrderVO orderVO = new OrderVO();
+                BeanUtils.copyProperties(orders,orderVO);
+                String orderDishes = getOrdeerDishesStr( orders);
+                orderVO.setOrderDishes(orderDishes);
+                list.add(orderVO);
+            }
+        }
+        return list;
+    }
+    //获取订单菜品信息字符串
+    private String getOrdeerDishesStr(Orders orders){
+        Long orderId = orders.getId();
+        List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(orderId);
+        //将订单菜品数据转化为字符串
+        List<String> list = orderDetailList.stream()
+                .map(x -> {
+                    String orderDish = x.getName() + "*" + x.getNumber() + ";";
+                    return orderDish;
+                }).collect(Collectors.toList());
+        return String.join("", list);
     }
 }
