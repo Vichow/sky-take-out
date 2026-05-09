@@ -1,7 +1,10 @@
 package com.sky.service.impl;
 
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import com.sky.constant.MessageConstant;
 import com.sky.context.BaseContext;
+import com.sky.dto.OrdersPageQueryDTO;
 import com.sky.dto.OrdersPaymentDTO;
 import com.sky.dto.OrdersSubmitDTO;
 import com.sky.entity.*;
@@ -9,9 +12,11 @@ import com.sky.mapper.AddressBookMapper;
 import com.sky.mapper.OrderDetailMapper;
 import com.sky.mapper.OrderMapper;
 import com.sky.mapper.ShoppingCartMapper;
+import com.sky.result.PageResult;
 import com.sky.service.OrderService;
 import com.sky.vo.OrderPaymentVO;
 import com.sky.vo.OrderSubmitVO;
+import com.sky.vo.OrderVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -137,5 +142,36 @@ public class OrderServiceImpl implements OrderService {
                 .build();
 
         orderMapper.update(orders);
+    }
+
+    /**
+     * 分页查询历史订单
+     * @param pageNum
+     * @param pageSize
+     * @param status
+     * @return
+     */
+    @Override
+    public PageResult pageQuery(int pageNum, int pageSize, Integer status) {
+        PageHelper.startPage(pageNum,pageSize);
+        Long userId = BaseContext.getCurrentId();
+        OrdersPageQueryDTO ordersPageQueryDTO = new OrdersPageQueryDTO();
+        ordersPageQueryDTO.setUserId(userId);
+        ordersPageQueryDTO.setStatus(status);
+        Page<Orders> page = orderMapper.pageQuery(ordersPageQueryDTO);
+        List<OrderVO> list = new ArrayList<>();
+        if (page!=null && page.getTotal()>0){
+            for (Orders orders : page) {
+                Long orderId = orders.getId();
+                List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(orderId);
+                OrderVO orderVO = new OrderVO();
+                BeanUtils.copyProperties(orders,orderVO);
+                orderVO.setOrderDetailList(orderDetailList);
+                list.add(orderVO);
+            }
+        }
+
+        long total = page.getTotal();
+        return new PageResult(total, list);
     }
 }
