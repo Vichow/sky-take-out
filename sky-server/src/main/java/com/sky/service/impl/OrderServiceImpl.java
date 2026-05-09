@@ -22,6 +22,7 @@ import io.swagger.models.auth.In;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -304,6 +305,22 @@ public class OrderServiceImpl implements OrderService {
         orders.setId(ordersDB.getId());
         orders.setStatus(Orders.CANCELLED);
         orders.setRejectionReason(ordersRejectionDTO.getRejectionReason());
+        orders.setCancelTime(LocalDateTime.now());
+        orderMapper.update(orders);
+    }
+
+    /**
+     * 商家取消订单
+     * @param ordersCancelDTO
+     */
+    @Override
+    public void cancelByBusiness(OrdersCancelDTO ordersCancelDTO) throws  Exception{
+        Orders ordersDB = orderMapper.getById(ordersCancelDTO.getId());
+        //管理端订单取消
+        Orders orders = new Orders();
+        orders.setId(ordersCancelDTO.getId());
+        orders.setStatus(Orders.CANCELLED);
+        orders.setCancelReason(ordersCancelDTO.getCancelReason());
         orders.setCancelTime(LocalDateTime.now());
         orderMapper.update(orders);
     }
