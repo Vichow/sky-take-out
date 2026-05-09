@@ -69,6 +69,7 @@ public class OrderServiceImpl implements OrderService {
         orders.setNumber(String.valueOf(System.currentTimeMillis()));
         orders.setPhone(addressBook.getPhone());
         orders.setConsignee(addressBook.getConsignee());
+        orders.setAddress(addressBook.getDetail());
         orders.setUserId(userId);
         orderMapper.insert(orders);
         List<OrderDetail> orderDetailList = new ArrayList<>();
@@ -173,5 +174,21 @@ public class OrderServiceImpl implements OrderService {
 
         long total = page.getTotal();
         return new PageResult(total, list);
+    }
+
+    /**
+     * 获取订单详情
+     * @param id
+     * @return
+     */
+    @Override
+    public OrderVO details(Long id) {
+        // 查询订单基本信息
+        Orders orders = orderMapper.getById(id);
+        OrderVO orderVO = new OrderVO();
+        BeanUtils.copyProperties(orders,orderVO);
+        List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(orders.getId());
+        orderVO.setOrderDetailList(orderDetailList);
+        return orderVO;
     }
 }
