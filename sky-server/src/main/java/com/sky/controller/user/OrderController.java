@@ -85,4 +85,17 @@ public class OrderController {
         orderService.cancel(id);
         return Result.success();
     }
+
+    /**
+     * 再来一单
+     * @param id
+     * @return
+     */
+    @PostMapping("/repetition/{id}")
+    public Result repetition(@PathVariable Long id){
+        log.info("再来一单：{}",id);
+        orderService.repetitoon(id);
+        return Result.success();
+    }
+
 }

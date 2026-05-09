@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -217,5 +218,26 @@ public class OrderServiceImpl implements OrderService {
         orders.setCancelReason("用户取消");
         orders.setCancelTime(LocalDateTime.now());
         orderMapper.update(orders);
+    }
+
+    /**
+     * 再来一单
+     * @param id
+     */
+    @Override
+    public void repetitoon(Long id) {
+        //获得用户id
+        Long userId=BaseContext.getCurrentId();
+        //查询订单详情
+        List<OrderDetail> orderDetailList=orderDetailMapper.getByOrderId(id);
+        //将详情对象转化为购物车对象
+        List<ShoppingCart> shoppingCartList=orderDetailList.stream()
+                .map(x->{ShoppingCart shoppingCart=new ShoppingCart();
+                BeanUtils.copyProperties(x,shoppingCart,"id");
+                shoppingCart.setUserId(userId);
+                shoppingCart.setCreateTime(LocalDateTime.now());
+                return shoppingCart;}).collect(Collectors.toList());
+        //添加到数据库
+        shoppingCartMapper.insertBatch(shoppingCartList);
     }
 }
